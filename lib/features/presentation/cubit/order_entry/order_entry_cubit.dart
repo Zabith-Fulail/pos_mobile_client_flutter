@@ -438,4 +438,91 @@ class OrderEntryCubit extends Cubit<OrderEntryState> {
   }
 
   Future<String> getBranch() => localDataSource.getBranch();
+
+
+  /// Very small fuzzy matcher: normalized contains + Levenshtein fallback
+  ProductModel? _matchProduct(String spoken, List<ProductModel> products) {
+    final normalized = spoken.toLowerCase().trim();
+
+    ProductModel? bestMatch;
+    int bestLen = 0;
+
+    for (final p in products) {
+      final name = p.name.toLowerCase();
+      if (normalized.contains(name) && name.length > bestLen) {
+        bestMatch = p;
+        bestLen = name.length;
+      }
+      final alt = p.alternativeName?.toLowerCase();
+      if (alt != null && normalized.contains(alt) && alt.length > bestLen) {
+        bestMatch = p;
+        bestLen = alt.length;
+      }
+    }
+    if (bestMatch != null) return bestMatch;
+
+    ProductModel? best;
+    int bestScore = 0;
+    final spokenWords = normalized.split(RegExp(r'\s+')).toSet();
+    for (final p in products) {
+      final nameWords = p.name.toLowerCase().split(RegExp(r'\s+')).toSet();
+      final score = nameWords.intersection(spokenWords).length;
+      if (score > bestScore) {
+        bestScore = score;
+        best = p;
+      }
+    }
+    return bestScore > 0 ? best : null;
+  }
+  int _extractQuantity(String spoken) {
+    final numberWords = {
+      'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
+      'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10,
+      'couple': 2, 'few': 3,
+      'a': 1, 'an': 1,
+    };
+
+    final digitMatch = RegExp(r'\b(\d+)\b').firstMatch(spoken);
+    if (digitMatch != null) return int.parse(digitMatch.group(1)!);
+
+    final words = spoken.toLowerCase().split(RegExp(r'\s+'));
+    for (final word in words) {
+      final clean = word.replaceAll(RegExp(r'[^a-z]'), '');
+      if (numberWords.containsKey(clean)) return numberWords[clean]!;
+    }
+    return 1;
+  }
+  String _extractRemark(String spoken, ProductModel product, int qty) {
+    var remark = spoken.toLowerCase();
+    remark = remark.replaceAll(product.name.toLowerCase(), '');
+    remark = remark.replaceAll(RegExp(r'\b(\d+|one|two|three|four|five|a|an|couple)\b'), '');
+    remark = remark.replaceAll(RegExp(r'\s+'), ' ').trim();
+    return remark;
+  }
+
+
+  void processVoiceOrder(String spokenText) {
+    if (state is! OrderEntryLoaded) return;
+    if (spokenText.trim().isEmpty) return;
+
+    final product = _matchProduct(spokenText, _allProducts);
+    if (product == null) {
+      return;
+    }
+
+    final qty = _extractQuantity(spokenText);
+    final remark = _extractRemark(spokenText, product, qty);
+
+    addToCart(product);
+
+    final currentState = state as OrderEntryLoaded;
+    final addedItem = currentState.cartItems.last;
+
+    if (qty > 1) {
+      updateQuantity(addedItem.uuid, qty - 1);
+    }
+    if (remark.isNotEmpty) {
+      updateCartItemDetails(addedItem.uuid, addedItem.modifiers, remark);
+    }
+  }
 }

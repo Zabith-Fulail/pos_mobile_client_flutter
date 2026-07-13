@@ -5,6 +5,7 @@ import 'package:d_pos/features/presentation/views/main_dashboard/widget/drawer_i
 import 'package:d_pos/features/presentation/views/main_dashboard/widget/product_list_item.dart';
 import 'package:d_pos/features/presentation/views/main_dashboard/widget/qty_button.dart';
 import 'package:d_pos/features/presentation/views/main_dashboard/widget/ring.dart';
+import 'package:d_pos/features/presentation/views/main_dashboard/widget/voice_order_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -202,6 +203,11 @@ class _MainPosScreenState extends State<MainPosScreen>
         return Scaffold(
           key: _scaffoldKey,
           backgroundColor: AppTheme.bgBase,
+          floatingActionButton: state is OrderEntryLoaded
+              ? VoiceCaptureButton(
+            onResult: context.read<OrderEntryCubit>().processVoiceOrder,
+          )
+              : null,
           drawer: _buildSideDrawer(context),
           appBar: _buildAppBar(state),
           body: _handleBody(state),

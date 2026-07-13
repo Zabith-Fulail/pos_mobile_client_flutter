@@ -1,3 +1,4 @@
+import 'package:d_pos/features/presentation/views/main_dashboard/widget/voice_order_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -18,6 +19,49 @@ class _EditItemScreenState extends State<EditItemScreen> {
   late TextEditingController _noteController;
   late List<ModifierModel> _selectedModifiers;
 
+  void _applyVoiceCommand(String spokenText) {
+    final allModifiers = context.read<OrderEntryCubit>().availableModifiers;
+    final text = spokenText.toLowerCase().replaceAll(RegExp(r'[^\w\s]'), ' ');
+    const negationWords = ['no', 'not', 'without', 'remove', 'skip'];
+
+    var remainder = text;
+    final textWords = text.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+
+    for (final mod in allModifiers) {
+      final modName = mod.name.toLowerCase();
+      final modWords = modName.split(RegExp(r'\s+'));
+
+      final matched = modWords.every((w) => textWords.contains(w));
+      if (!matched) continue;
+
+      final idx = text.indexOf(modWords.last);
+      final before = idx > 0 ? text.substring(0, idx).trim() : '';
+      final isNegated = negationWords.any((w) => before.split(' ').contains(w));
+
+      if (isNegated) {
+        while (_getQty(mod) > 0) _removeModifier(mod);
+      } else if (_getQty(mod) == 0) {
+        _addModifier(mod);
+      }
+
+      for (final w in modWords) {
+        remainder = remainder.replaceAll(RegExp('\\b$w\\b'), '');
+      }
+    }
+
+    for (final w in [...negationWords, 'add', 'extra', 'with', 'please', 'make', 'it']) {
+      remainder = remainder.replaceAll(RegExp('\\b$w\\b'), '');
+    }
+    remainder = remainder.replaceAll(RegExp(r'\s+'), ' ').trim();
+
+    if (remainder.isNotEmpty) {
+      setState(() {
+        _noteController.text = _noteController.text.isEmpty
+            ? remainder
+            : '${_noteController.text}, $remainder';
+      });
+    }
+  }
   @override
   void initState() {
     super.initState();
@@ -49,6 +93,13 @@ class _EditItemScreenState extends State<EditItemScreen> {
     return Scaffold(
       backgroundColor: AppTheme.bgBase,
       appBar: AppBar(
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: VoiceCaptureButton(onResult: _applyVoiceCommand, mini: true),
+          ),
+        ],
+
         backgroundColor: AppTheme.bgSurface,
         elevation: 0,
         leading: IconButton(
