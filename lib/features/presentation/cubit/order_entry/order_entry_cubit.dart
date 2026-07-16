@@ -11,8 +11,10 @@ import '../../../../error/failures.dart';
 import '../../../../utils/app_strings.dart';
 import '../../../data/data_sources/local_data_sources.dart';
 import '../../../data/models/request/place_order_request.dart';
+import '../../../domain/entity/voice_order_result.dart';
 import '../../../domain/repositories/repository.dart';
 import '../../../domain/use_cases/categories_use_case.dart';
+import '../../../domain/use_cases/extract_order_from_speech_use_case.dart';
 import '../../../domain/use_cases/submit_kot_use_case.dart';
 import 'order_entry_state.dart';
 
@@ -20,6 +22,7 @@ class OrderEntryCubit extends Cubit<OrderEntryState> {
   final MainScreenDataUseCase mainScreenDataUseCase;
   final SubmitKitchenOrderUseCase submitKitchenOrderUseCase;
   final CategoriesUseCase categoriesUseCase;
+  final ExtractOrderFromSpeechUseCase extractOrderFromSpeechUseCase;
   final Repository repository;
   final LocalDataSource localDataSource;
 
@@ -33,23 +36,23 @@ class OrderEntryCubit extends Cubit<OrderEntryState> {
     required this.repository,
     required this.localDataSource,
     required this.mainScreenDataUseCase,
+    required this.extractOrderFromSpeechUseCase,
     required this.submitKitchenOrderUseCase,
     required this.categoriesUseCase,
   }) : super(OrderEntryInitial());
-
 
   void searchProduct(String query) {
     if (state is OrderEntryLoaded) {
       final currentState = state as OrderEntryLoaded;
 
-      final filteredList = _allProducts.where((p) =>
-          p.name.toLowerCase().contains(query.toLowerCase())
-      ).toList();
+      final filteredList =
+          _allProducts
+              .where((p) => p.name.toLowerCase().contains(query.toLowerCase()))
+              .toList();
 
       emit(currentState.copyWith(currentProducts: filteredList));
     }
   }
-
 
   Future<void> loadInitialData() async {
     emit(OrderEntryLoading());
@@ -57,18 +60,15 @@ class OrderEntryCubit extends Cubit<OrderEntryState> {
 
     result.fold(
       (failure) {
-
-        if (failure is ConnectionFailure){
+        if (failure is ConnectionFailure) {
           emit(
             OrderEntryError(
               message: ErrorMessages().mapFailureToMessage(failure) ?? "",
             ),
           );
-        }
-        else if (failure is AuthorizedFailure) {
+        } else if (failure is AuthorizedFailure) {
           emit(OrderEntryError(message: AppStrings.unAuthorizedDes));
-        }
-        else if (failure is ServerFailure) {
+        } else if (failure is ServerFailure) {
           emit(
             OrderEntryError(
               message:
@@ -76,28 +76,23 @@ class OrderEntryCubit extends Cubit<OrderEntryState> {
                   AppStrings.somethingWentWrong,
             ),
           );
-        }
-        else {
+        } else {
           emit(OrderEntryError(message: AppStrings.somethingWentWrong));
         }
       },
       (data) async {
         _allProducts = data.products;
         _allModifiers = data.modifiers;
-        
+
         List<CategoryModel> categoriesToUse = data.categories;
-        
+
         final localCategoriesResult = await categoriesUseCase.getAll();
-        localCategoriesResult.fold(
-          (failure) {
-          },
-          (localCategories) {
-            if (localCategories.isNotEmpty) {
-              categoriesToUse = localCategories;
-            }
-          },
-        );
-        
+        localCategoriesResult.fold((failure) {}, (localCategories) {
+          if (localCategories.isNotEmpty) {
+            categoriesToUse = localCategories;
+          }
+        });
+
         _categories = categoriesToUse;
 
         if (categoriesToUse.isEmpty) {
@@ -120,45 +115,41 @@ class OrderEntryCubit extends Cubit<OrderEntryState> {
     );
   }
 
-   List<ModifierModel> get availableModifiers => _allModifiers;
+  List<ModifierModel> get availableModifiers => _allModifiers;
 
-   Future<void> refreshCategories() async {
-     if (state is! OrderEntryLoaded) return;
-     final currentState = state as OrderEntryLoaded;
+  Future<void> refreshCategories() async {
+    if (state is! OrderEntryLoaded) return;
+    final currentState = state as OrderEntryLoaded;
 
-     try {
-       final localCategoriesResult = await categoriesUseCase.getAll();
-       localCategoriesResult.fold(
-         (failure) {
-         },
-         (localCategories) {
-           if (localCategories.isNotEmpty) {
-             _categories = localCategories;
-             
-             CategoryModel selectedCat = currentState.selectedCategory;
-             if (!_categories.any((c) => c.id == selectedCat.id)) {
-               selectedCat = _categories.first;
-               _selectedCategory = selectedCat;
-             }
-             
-             final updatedProducts = _getProductForCategory(selectedCat.id);
-             
-             emit(
-               currentState.copyWith(
-                 categories: _categories,
-                 selectedCategory: selectedCat,
-                 currentProducts: updatedProducts,
-               ),
-             );
-           }
-         },
-       );
-     } catch (e) {
-       print(e);
-     }
+    try {
+      final localCategoriesResult = await categoriesUseCase.getAll();
+      localCategoriesResult.fold((failure) {}, (localCategories) {
+        if (localCategories.isNotEmpty) {
+          _categories = localCategories;
+
+          CategoryModel selectedCat = currentState.selectedCategory;
+          if (!_categories.any((c) => c.id == selectedCat.id)) {
+            selectedCat = _categories.first;
+            _selectedCategory = selectedCat;
+          }
+
+          final updatedProducts = _getProductForCategory(selectedCat.id);
+
+          emit(
+            currentState.copyWith(
+              categories: _categories,
+              selectedCategory: selectedCat,
+              currentProducts: updatedProducts,
+            ),
+          );
+        }
+      });
+    } catch (e) {
+      print(e);
     }
+  }
 
-   void selectCategory(CategoryModel category) {
+  void selectCategory(CategoryModel category) {
     if (state is OrderEntryLoaded) {
       final currentState = state as OrderEntryLoaded;
       _selectedCategory = category;
@@ -283,7 +274,7 @@ class OrderEntryCubit extends Cubit<OrderEntryState> {
         for (var mod in item.modifiers) {
           itemTotal += (mod.price * item.quantity);
         }
-              subTotal += itemTotal;
+        subTotal += itemTotal;
         totalItemsQty += item.quantity;
       }
 
@@ -424,21 +415,23 @@ class OrderEntryCubit extends Cubit<OrderEntryState> {
 
           CategoryModel selectedCat = currentState.selectedCategory;
           if (!_categories.any((c) => c.id == selectedCat.id)) {
-            selectedCat = _categories.isNotEmpty ? _categories.first : selectedCat;
+            selectedCat =
+                _categories.isNotEmpty ? _categories.first : selectedCat;
           }
 
-          emit(currentState.copyWith(
-            categories: _categories,
-            selectedCategory: selectedCat,
-            currentProducts: _getProductForCategory(selectedCat.id),
-          ));
+          emit(
+            currentState.copyWith(
+              categories: _categories,
+              selectedCategory: selectedCat,
+              currentProducts: _getProductForCategory(selectedCat.id),
+            ),
+          );
         }
       });
     });
   }
 
   Future<String> getBranch() => localDataSource.getBranch();
-
 
   /// Very small fuzzy matcher: normalized contains + Levenshtein fallback
   ProductModel? _matchProduct(String spoken, List<ProductModel> products) {
@@ -474,12 +467,23 @@ class OrderEntryCubit extends Cubit<OrderEntryState> {
     }
     return bestScore > 0 ? best : null;
   }
+
   int _extractQuantity(String spoken) {
     final numberWords = {
-      'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
-      'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10,
-      'couple': 2, 'few': 3,
-      'a': 1, 'an': 1,
+      'one': 1,
+      'two': 2,
+      'three': 3,
+      'four': 4,
+      'five': 5,
+      'six': 6,
+      'seven': 7,
+      'eight': 8,
+      'nine': 9,
+      'ten': 10,
+      'couple': 2,
+      'few': 3,
+      'a': 1,
+      'an': 1,
     };
 
     final digitMatch = RegExp(r'\b(\d+)\b').firstMatch(spoken);
@@ -492,14 +496,17 @@ class OrderEntryCubit extends Cubit<OrderEntryState> {
     }
     return 1;
   }
+
   String _extractRemark(String spoken, ProductModel product, int qty) {
     var remark = spoken.toLowerCase();
     remark = remark.replaceAll(product.name.toLowerCase(), '');
-    remark = remark.replaceAll(RegExp(r'\b(\d+|one|two|three|four|five|a|an|couple)\b'), '');
+    remark = remark.replaceAll(
+      RegExp(r'\b(\d+|one|two|three|four|five|a|an|couple)\b'),
+      '',
+    );
     remark = remark.replaceAll(RegExp(r'\s+'), ' ').trim();
     return remark;
   }
-
 
   void processVoiceOrder(String spokenText) {
     if (state is! OrderEntryLoaded) return;
@@ -524,5 +531,98 @@ class OrderEntryCubit extends Cubit<OrderEntryState> {
     if (remark.isNotEmpty) {
       updateCartItemDetails(addedItem.uuid, addedItem.modifiers, remark);
     }
+  }
+
+  Future<VoiceOrderResult> submitVoiceOrder(String confirmedText) async {
+    if (state is! OrderEntryLoaded) {
+      return VoiceOrderResult(addedItems: [], unmatchedItemNames: []);
+    }
+
+    final addedItems = <CartItem>[];
+    final unmatched = <String>[];
+
+    final result = await extractOrderFromSpeechUseCase(confirmedText);
+
+    result.fold(
+      (failure) {
+        print("Speech Extraction Failure: $failure");
+      },
+      (extractedOrder) {
+        for (final extractedItem in extractedOrder.items) {
+          final product = _matchProduct(extractedItem.name, _allProducts);
+          if (product == null) {
+            unmatched.add(extractedItem.name);
+            continue;
+          }
+
+          final matchedModifiers = <ModifierModel>[];
+          final noteFragments = <String>[];
+
+          for (final extMod in extractedItem.modifiers) {
+            if (extMod.negated) {
+              noteFragments.add('No ${extMod.name}');
+              continue;
+            }
+            final matchedMod = _matchModifier(extMod.name, _allModifiers);
+            if (matchedMod != null) {
+              matchedModifiers.add(matchedMod);
+            } else {
+              noteFragments.add(extMod.name);
+            }
+          }
+
+          addedItems.add(
+            CartItem(
+              uuid: const Uuid().v4(),
+              product: product,
+              quantity: extractedItem.quantity,
+              modifiers: matchedModifiers,
+              note: noteFragments.join(', '),
+            ),
+          );
+        }
+      },
+    );
+
+    if (addedItems.isNotEmpty) {
+      final currentState = state as OrderEntryLoaded;
+      final updatedCart = List<CartItem>.from(currentState.cartItems)
+        ..addAll(addedItems);
+      emit(currentState.copyWith(cartItems: updatedCart));
+    }
+
+    return VoiceOrderResult(
+      addedItems: addedItems,
+      unmatchedItemNames: unmatched,
+    );
+  }
+
+  ModifierModel? _matchModifier(String spoken, List<ModifierModel> modifiers) {
+    final normalized = spoken.toLowerCase().trim();
+
+    ModifierModel? bestMatch;
+    int bestLen = 0;
+
+    for (final m in modifiers) {
+      final name = m.name.toLowerCase();
+      if (normalized.contains(name) && name.length > bestLen) {
+        bestMatch = m;
+        bestLen = name.length;
+      }
+    }
+    if (bestMatch != null) return bestMatch;
+
+    ModifierModel? best;
+    int bestScore = 0;
+    final spokenWords = normalized.split(RegExp(r'\s+')).toSet();
+    for (final m in modifiers) {
+      final nameWords = m.name.toLowerCase().split(RegExp(r'\s+')).toSet();
+      final score = nameWords.intersection(spokenWords).length;
+      if (score > bestScore) {
+        bestScore = score;
+        best = m;
+      }
+    }
+    return bestScore > 0 ? best : null;
   }
 }

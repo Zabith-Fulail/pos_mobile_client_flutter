@@ -10,5 +10,5 @@ class ErrorResponse extends Equatable {
   final String? responseDescription;
 
   @override
-  List<Object> get props => [responseDescription!, responseCode!];
+  List<Object> get props => [responseDescription ?? "", responseCode ?? ""];
 }
