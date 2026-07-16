@@ -215,16 +215,22 @@ class ApiHelper {
     }
   }
 
-  Future<dynamic> post(String path, {dynamic data}) async {
+  Future<dynamic> post(String path, {dynamic data,Options? options,}) async {
     try {
-      final response = await dio.post(path, data: data);
+      final response = await dio.post(path, data: data, options: options,);
       return response.data;
     } on DioException catch (e) {
       if (e.response?.statusCode == 400 ||
           e.response?.statusCode == 401 ||
           e.response?.statusCode == 500) {
         log("DioException ${e.response?.data}");
-        throw ServerException(ErrorResponseModel.fromJson(e.response?.data));
+        try {
+          throw ServerException(ErrorResponseModel.fromJson(e.response?.data));
+        } catch (_) {
+          throw ServerException(ErrorResponseModel(
+            errorDescription: e.response?.statusMessage ?? e.message,
+          ));
+        }
       }
       log("DioException ${e.message}");
       throw ServerException(ErrorResponseModel(errorDescription: e.message));
