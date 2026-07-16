@@ -5,11 +5,9 @@ import 'package:d_pos/features/presentation/views/main_dashboard/widget/drawer_i
 import 'package:d_pos/features/presentation/views/main_dashboard/widget/product_list_item.dart';
 import 'package:d_pos/features/presentation/views/main_dashboard/widget/qty_button.dart';
 import 'package:d_pos/features/presentation/views/main_dashboard/widget/ring.dart';
-import 'package:d_pos/features/presentation/views/main_dashboard/widget/voice_order_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/service/dependency_injection.dart';
 import '../../../../core/service/global_image_settings.dart';
@@ -19,6 +17,7 @@ import '../../../data/models/pos_models.dart';
 import '../../cubit/order_entry/order_entry_cubit.dart';
 import '../../cubit/order_entry/order_entry_state.dart';
 import '../../widget/product_image_popup.dart';
+import '../../widget/voice_order_bar.dart';
 import '../manage_categories/manage_categories_screen.dart';
 import '../manage_featured/manage_images_screen.dart';
 import '../manage_featured/manage_videos_screen.dart';
@@ -203,9 +202,22 @@ class _MainPosScreenState extends State<MainPosScreen>
         return Scaffold(
           key: _scaffoldKey,
           backgroundColor: AppTheme.bgBase,
-          floatingActionButton: state is OrderEntryLoaded
-              ? VoiceCaptureButton(
-            onResult: context.read<OrderEntryCubit>().processVoiceOrder,
+          bottomNavigationBar: state is OrderEntryLoaded
+              ? VoiceOrderBar(
+            onConfirm: (text) async {
+              final result = await context.read<OrderEntryCubit>().submitVoiceOrder(text);
+              if (result.unmatchedItemNames.isNotEmpty && mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Not on menu, please add manually: ${result.unmatchedItemNames.join(", ")}',
+                    ),
+                    backgroundColor: AppTheme.red,
+                    duration: const Duration(seconds: 4),
+                  ),
+                );
+              }
+            },
           )
               : null,
           drawer: _buildSideDrawer(context),

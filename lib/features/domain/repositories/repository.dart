@@ -10,6 +10,7 @@ import '../../data/models/response/main_screen_response.dart';
 import '../../data/models/response/place_order_response.dart';
 import '../../data/models/response/print_response_model.dart';
 import '../../data/models/response/running_orders_response_model.dart';
+import '../entity/extracted_order.dart';
 
 abstract class Repository {
   Future<Either<Failure, LoginResponse>> login(LoginRequest loginRequest);
@@ -66,4 +67,6 @@ abstract class Repository {
   Future<Either<Failure, bool>> deleteProduct(int id);
 
   Future<Either<Failure, List<ProductModel>>> getLocalProducts();
+
+  Future<Either<Failure,ExtractedOrderEntity>> extractOrderFromSpeech(String transcript);
 }

@@ -24,11 +24,31 @@ class ApiHelper {
       ..headers = {"Content-Type": "application/json", "Accept": "*/*"};
     dio.interceptors.addAll([
       InterceptorsWrapper(
+        // onRequest: (options, handler) async {
+        //   final token = AppConstants.accessToken;
+        //   if (token != null && token.isNotEmpty) {
+        //     options.headers["Authorization"] = "Bearer $token";
+        //   }
+        //   if (options.data != null) {
+        //     log("Request Body: ${_prettyJson(options.data)}");
+        //   }
+        //   return handler.next(options);
+        // },
         onRequest: (options, handler) async {
-          final token = AppConstants.accessToken;
-          if (token != null && token.isNotEmpty) {
-            options.headers["Authorization"] = "Bearer $token";
+          // 👇 1. Check if the bypass flag is set to true
+          final bypassAuth = options.extra['bypass_auth'] == true;
+
+          // Only attach the Bearer token if we are NOT bypassing auth
+          if (!bypassAuth) {
+            final token = AppConstants.accessToken;
+            if (token != null && token.isNotEmpty) {
+              options.headers["Authorization"] = "Bearer $token";
+            }
+          } else {
+            // Ensure no lingering Authorization header exists if bypassed
+            options.headers.remove("Authorization");
           }
+
           if (options.data != null) {
             log("Request Body: ${_prettyJson(options.data)}");
           }

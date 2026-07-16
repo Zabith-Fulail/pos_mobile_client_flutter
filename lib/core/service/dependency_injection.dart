@@ -9,6 +9,7 @@ import '../../features/data/data_sources/remote_data_sources.dart';
 import '../../features/data/repositories/repository_impl.dart';
 import '../../features/domain/repositories/repository.dart';
 import '../../features/domain/use_cases/categories_use_case.dart';
+import '../../features/domain/use_cases/extract_order_from_speech_use_case.dart';
 import '../../features/domain/use_cases/get_running_orders_use_case.dart';
 import '../../features/domain/use_cases/login_use_case.dart';
 import '../../features/domain/use_cases/logout_use_case.dart';
@@ -40,6 +41,9 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton<NetworkInfo>(() => NetworkInfoImpl(sl()));
   sl.registerLazySingleton(() => sharedPreferences);
   sl.registerLazySingleton(() => secureStorage);
+  // sl.registerLazySingleton<AIOrderExtractionService>(
+  //       () => AIOrderExtractionService(),
+  // );
 
   /// Dio client
   sl.registerLazySingleton<Dio>(() => Dio());
@@ -76,6 +80,8 @@ Future<void> initDependencies() async {
       mainScreenDataUseCase: sl(),
       submitKitchenOrderUseCase: sl(),
       categoriesUseCase: sl(),
+      extractOrderFromSpeechUseCase: sl()
+      // aiService: sl<AIOrderExtractionService>()
     ),
   );
 
@@ -101,4 +107,5 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => LogoutUseCase(sl()));
   sl.registerLazySingleton(() => SubmitKitchenOrderUseCase(sl()));
   sl.registerLazySingleton(() => CategoriesUseCase(sl()));
+  sl.registerLazySingleton(() => ExtractOrderFromSpeechUseCase(sl()));
 }

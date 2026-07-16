@@ -15,9 +15,11 @@ import '../../../core/network/network_info.dart';
 import '../../../core/service/image_downloader_service.dart';
 import '../../../error/exceptions.dart';
 import '../../../error/failures.dart';
+import '../../domain/entity/extracted_order.dart';
 import '../../domain/repositories/repository.dart';
 import '../data_sources/remote_data_sources.dart';
 import '../models/common/base_response.dart';
+import '../models/request/extracted_order_model.dart';
 import '../models/request/place_order_request.dart';
 import '../models/response/error_response_model.dart';
 import '../models/response/main_screen_response.dart';
@@ -105,6 +107,7 @@ class RepositoryImpl implements Repository {
     }
   }
 
+
   MainScreenResponse _mockMainScreenData() {
     return const MainScreenResponse(
       waiter: WaiterModel(
@@ -112,22 +115,269 @@ class RepositoryImpl implements Repository {
         fullName: 'Demo Waiter',
         emailAddress: 'demo@example.com',
       ),
+
       modifiers: [
-        ModifierModel(id: 1, name: 'Extra Cheese', price: 1.5),
-        ModifierModel(id: 2, name: 'Spicy', price: 0.0),
-        ModifierModel(id: 3, name: 'No Onion', price: 0.0),
+        ModifierModel(id: 1, name: 'Extra Cheese', price: 1.50),
+        ModifierModel(id: 2, name: 'Extra Chicken', price: 2.50),
+        ModifierModel(id: 3, name: 'Extra Beef Patty', price: 3.00),
+        ModifierModel(id: 4, name: 'Extra Fries', price: 2.00),
+        ModifierModel(id: 5, name: 'Extra Sauce', price: 0.50),
+        ModifierModel(id: 6, name: 'Spicy', price: 0.00),
+        ModifierModel(id: 7, name: 'No Onion', price: 0.00),
+        ModifierModel(id: 8, name: 'No Ice', price: 0.00),
       ],
+
       categories: [
-        CategoryModel(id: 1, name: 'Beverages'),
-        CategoryModel(id: 2, name: 'Burgers'),
-        CategoryModel(id: 3, name: 'Desserts'),
+        CategoryModel(
+          id: 1,
+          name: 'Burgers',
+          imageUrl: 'https://loremflickr.com/600/600/burger?lock=1',
+        ),
+        CategoryModel(
+          id: 2,
+          name: 'Fries',
+          imageUrl: 'https://loremflickr.com/600/600/french-fries?lock=2',
+        ),
+        CategoryModel(
+          id: 3,
+          name: 'Pizza',
+          imageUrl: 'https://loremflickr.com/600/600/pizza?lock=3',
+        ),
+        CategoryModel(
+          id: 4,
+          name: 'Sandwiches',
+          imageUrl: 'https://loremflickr.com/600/600/sandwich?lock=4',
+        ),
+        CategoryModel(
+          id: 5,
+          name: 'Rice',
+          imageUrl: 'https://loremflickr.com/600/600/fried-rice?lock=5',
+        ),
+        CategoryModel(
+          id: 6,
+          name: 'Pasta',
+          imageUrl: 'https://loremflickr.com/600/600/pasta?lock=6',
+        ),
+        CategoryModel(
+          id: 7,
+          name: 'Desserts',
+          imageUrl: 'https://loremflickr.com/600/600/chocolate-cake?lock=7',
+        ),
+        CategoryModel(
+          id: 8,
+          name: 'Beverages',
+          imageUrl: 'https://loremflickr.com/600/600/coffee?lock=8',
+        ),
       ],
+
       products: [
-        ProductModel(id: 1, name: 'Iced Coffee', alternativeName: null, price: 3.5, categoryId: 1),
-        ProductModel(id: 2, name: 'Fresh Juice', alternativeName: null, price: 2.5, categoryId: 1),
-        ProductModel(id: 3, name: 'Cheese Burger', alternativeName: null, price: 6.0, categoryId: 2),
-        ProductModel(id: 4, name: 'Chicken Burger', alternativeName: null, price: 5.5, categoryId: 2),
-        ProductModel(id: 5, name: 'Chocolate Cake', alternativeName: null, price: 4.0, categoryId: 3),
+        // ---------------- Burgers ----------------
+        ProductModel(
+          id: 1,
+          name: 'Classic Beef Burger',
+          alternativeName: null,
+          price: 8.50,
+          categoryId: 1,
+          imageUrl: 'https://loremflickr.com/600/600/beef-burger?lock=11',
+        ),
+        ProductModel(
+          id: 2,
+          name: 'Cheese Burger',
+          alternativeName: null,
+          price: 9.00,
+          categoryId: 1,
+          imageUrl: 'https://loremflickr.com/600/600/cheeseburger?lock=12',
+        ),
+        ProductModel(
+          id: 3,
+          name: 'Chicken Burger',
+          alternativeName: null,
+          price: 8.00,
+          categoryId: 1,
+          imageUrl: 'https://loremflickr.com/600/600/chicken-burger?lock=13',
+        ),
+        ProductModel(
+          id: 4,
+          name: 'Double Beef Burger',
+          alternativeName: null,
+          price: 11.50,
+          categoryId: 1,
+          imageUrl: 'https://loremflickr.com/600/600/double-burger?lock=14',
+        ),
+
+        // ---------------- Fries ----------------
+        ProductModel(
+          id: 5,
+          name: 'French Fries',
+          alternativeName: null,
+          price: 3.50,
+          categoryId: 2,
+          imageUrl: 'https://loremflickr.com/600/600/fries?lock=15',
+        ),
+        ProductModel(
+          id: 6,
+          name: 'Cheese Fries',
+          alternativeName: null,
+          price: 5.00,
+          categoryId: 2,
+          imageUrl: 'https://loremflickr.com/600/600/cheese-fries?lock=16',
+        ),
+        ProductModel(
+          id: 7,
+          name: 'Loaded Fries',
+          alternativeName: null,
+          price: 6.50,
+          categoryId: 2,
+          imageUrl: 'https://loremflickr.com/600/600/loaded-fries?lock=17',
+        ),
+
+        // ---------------- Pizza ----------------
+        ProductModel(
+          id: 8,
+          name: 'Margherita Pizza',
+          alternativeName: null,
+          price: 11.00,
+          categoryId: 3,
+          imageUrl: 'https://loremflickr.com/600/600/margherita-pizza?lock=18',
+        ),
+        ProductModel(
+          id: 9,
+          name: 'Pepperoni Pizza',
+          alternativeName: null,
+          price: 13.00,
+          categoryId: 3,
+          imageUrl: 'https://loremflickr.com/600/600/pepperoni-pizza?lock=19',
+        ),
+        ProductModel(
+          id: 10,
+          name: 'BBQ Chicken Pizza',
+          alternativeName: null,
+          price: 14.50,
+          categoryId: 3,
+          imageUrl: 'https://loremflickr.com/600/600/bbq-pizza?lock=20',
+        ),
+
+        // ---------------- Sandwiches ----------------
+        ProductModel(
+          id: 11,
+          name: 'Club Sandwich',
+          alternativeName: null,
+          price: 7.50,
+          categoryId: 4,
+          imageUrl: 'https://loremflickr.com/600/600/club-sandwich?lock=21',
+        ),
+        ProductModel(
+          id: 12,
+          name: 'Chicken Sandwich',
+          alternativeName: null,
+          price: 7.00,
+          categoryId: 4,
+          imageUrl: 'https://loremflickr.com/600/600/chicken-sandwich?lock=22',
+        ),
+
+        // ---------------- Rice ----------------
+        ProductModel(
+          id: 13,
+          name: 'Chicken Fried Rice',
+          alternativeName: null,
+          price: 9.50,
+          categoryId: 5,
+          imageUrl: 'https://loremflickr.com/600/600/chicken-fried-rice?lock=23',
+        ),
+        ProductModel(
+          id: 14,
+          name: 'Seafood Fried Rice',
+          alternativeName: null,
+          price: 11.00,
+          categoryId: 5,
+          imageUrl: 'https://loremflickr.com/600/600/seafood-rice?lock=24',
+        ),
+        ProductModel(
+          id: 15,
+          name: 'Vegetable Fried Rice',
+          alternativeName: null,
+          price: 8.50,
+          categoryId: 5,
+          imageUrl: 'https://loremflickr.com/600/600/vegetable-rice?lock=25',
+        ),
+
+        // ---------------- Pasta ----------------
+        ProductModel(
+          id: 16,
+          name: 'Chicken Alfredo',
+          alternativeName: null,
+          price: 12.50,
+          categoryId: 6,
+          imageUrl: 'https://loremflickr.com/600/600/alfredo-pasta?lock=26',
+        ),
+        ProductModel(
+          id: 17,
+          name: 'Spaghetti Bolognese',
+          alternativeName: null,
+          price: 12.00,
+          categoryId: 6,
+          imageUrl: 'https://loremflickr.com/600/600/spaghetti?lock=27',
+        ),
+
+        // ---------------- Desserts ----------------
+        ProductModel(
+          id: 18,
+          name: 'Chocolate Cake',
+          alternativeName: null,
+          price: 5.00,
+          categoryId: 7,
+          imageUrl: 'https://loremflickr.com/600/600/chocolate-cake?lock=28',
+        ),
+        ProductModel(
+          id: 19,
+          name: 'Brownie',
+          alternativeName: null,
+          price: 4.50,
+          categoryId: 7,
+          imageUrl: 'https://loremflickr.com/600/600/brownie?lock=29',
+        ),
+        ProductModel(
+          id: 20,
+          name: 'Ice Cream Sundae',
+          alternativeName: null,
+          price: 4.00,
+          categoryId: 7,
+          imageUrl: 'https://loremflickr.com/600/600/ice-cream?lock=30',
+        ),
+
+        // ---------------- Beverages ----------------
+        ProductModel(
+          id: 21,
+          name: 'Coca Cola',
+          alternativeName: null,
+          price: 2.50,
+          categoryId: 8,
+          imageUrl: 'https://loremflickr.com/600/600/coca-cola?lock=31',
+        ),
+        ProductModel(
+          id: 22,
+          name: 'Orange Juice',
+          alternativeName: null,
+          price: 3.50,
+          categoryId: 8,
+          imageUrl: 'https://loremflickr.com/600/600/orange-juice?lock=32',
+        ),
+        ProductModel(
+          id: 23,
+          name: 'Iced Coffee',
+          alternativeName: null,
+          price: 4.00,
+          categoryId: 8,
+          imageUrl: 'https://loremflickr.com/600/600/iced-coffee?lock=33',
+        ),
+        ProductModel(
+          id: 24,
+          name: 'Milkshake',
+          alternativeName: null,
+          price: 5.50,
+          categoryId: 8,
+          imageUrl: 'https://loremflickr.com/600/600/milkshake?lock=34',
+        ),
       ],
     );
   }
@@ -516,6 +766,20 @@ class RepositoryImpl implements Repository {
     } catch (e) {
       debugPrint("_saveBase64AsFile FAILED: $e");
       return null;
+    }
+  }
+
+  @override
+  Future<Either<Failure, ExtractedOrderEntity>> extractOrderFromSpeech(String transcript) async {
+    try {
+      final ExtractedOrderModel result = await remoteDataSource.extractOrder(transcript);
+
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(ErrorResponseModel(errorDescription: e.toString())));
+    } catch (e) {
+      return Left(
+          ServerFailure(ErrorResponseModel(errorDescription: e.toString())));
     }
   }
 }

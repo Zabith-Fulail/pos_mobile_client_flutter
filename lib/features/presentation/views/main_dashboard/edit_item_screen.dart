@@ -19,40 +19,104 @@ class _EditItemScreenState extends State<EditItemScreen> {
   late TextEditingController _noteController;
   late List<ModifierModel> _selectedModifiers;
 
+
   void _applyVoiceCommand(String spokenText) {
     final allModifiers = context.read<OrderEntryCubit>().availableModifiers;
     final text = spokenText.toLowerCase().replaceAll(RegExp(r'[^\w\s]'), ' ');
     const negationWords = ['no', 'not', 'without', 'remove', 'skip'];
+    const helperWords = ['add', 'extra', 'with'];
+    const skipWords = {'any', 'the', 'some', 'a', 'an'};
 
-    var remainder = text;
-    final textWords = text.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+    final words = text.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+    final consumedIndices = <int>{};
 
-    for (final mod in allModifiers) {
-      final modName = mod.name.toLowerCase();
-      final modWords = modName.split(RegExp(r'\s+'));
+    final sortedMods = [...allModifiers]..sort(
+      (a, b) => b.name.length.compareTo(a.name.length),
+    );
 
-      final matched = modWords.every((w) => textWords.contains(w));
-      if (!matched) continue;
+    for (final mod in sortedMods) {
+      final cleanModName = mod.name
+          .toLowerCase()
+          .replaceAll(RegExp(r'[^\w\s]'), ' ')
+          .trim();
+      final modWords = cleanModName
+          .split(RegExp(r'\s+'))
+          .where((w) => w.isNotEmpty)
+          .toList();
 
-      final idx = text.indexOf(modWords.last);
-      final before = idx > 0 ? text.substring(0, idx).trim() : '';
-      final isNegated = negationWords.any((w) => before.split(' ').contains(w));
+      if (modWords.isEmpty) continue;
+
+      final overlap = modWords.where((w) => words.contains(w)).toList();
+      if (overlap.isEmpty) continue;
+
+      // Find the indices of these overlap words that are not yet consumed
+      final indices = <int>[];
+      for (final w in overlap) {
+        int idx = -1;
+        for (int i = 0; i < words.length; i++) {
+          if (!consumedIndices.contains(i) && !indices.contains(i) && words[i] == w) {
+            idx = i;
+            break;
+          }
+        }
+        if (idx != -1) {
+          indices.add(idx);
+        }
+      }
+
+      if (indices.isEmpty) continue;
+      indices.sort();
+
+      int? negOrHelperIdx;
+      bool isNegated = false;
+
+      final prev1 = indices.first - 1;
+      if (prev1 >= 0 && !consumedIndices.contains(prev1)) {
+        final w1 = words[prev1];
+        if (negationWords.contains(w1)) {
+          isNegated = true;
+          negOrHelperIdx = prev1;
+        } else if (helperWords.contains(w1)) {
+          negOrHelperIdx = prev1;
+        } else if (skipWords.contains(w1)) {
+          final prev2 = indices.first - 2;
+          if (prev2 >= 0 && !consumedIndices.contains(prev2)) {
+            final w2 = words[prev2];
+            if (negationWords.contains(w2)) {
+              isNegated = true;
+              negOrHelperIdx = prev2;
+            } else if (helperWords.contains(w2)) {
+              negOrHelperIdx = prev2;
+            }
+          }
+        }
+      }
 
       if (isNegated) {
-        while (_getQty(mod) > 0) _removeModifier(mod);
+        while (_getQty(mod) > 0) {
+          _removeModifier(mod);
+        }
       } else if (_getQty(mod) == 0) {
         _addModifier(mod);
       }
 
-      for (final w in modWords) {
-        remainder = remainder.replaceAll(RegExp('\\b$w\\b'), '');
+      // Mark the modifier words and any preceding negation/helper word as consumed
+      consumedIndices.addAll(indices);
+      if (negOrHelperIdx != null) {
+        consumedIndices.add(negOrHelperIdx);
       }
     }
 
-    for (final w in [...negationWords, 'add', 'extra', 'with', 'please', 'make', 'it']) {
-      remainder = remainder.replaceAll(RegExp('\\b$w\\b'), '');
+    // Filter out consumed words and filler words
+    final fillerWords = {'please', 'make', 'it'};
+    final remainderWords = <String>[];
+    for (int i = 0; i < words.length; i++) {
+      if (!consumedIndices.contains(i) && !fillerWords.contains(words[i])) {
+        remainderWords.add(words[i]);
+      }
     }
-    remainder = remainder.replaceAll(RegExp(r'\s+'), ' ').trim();
+
+    final remainder = remainderWords.join(' ').trim();
 
     if (remainder.isNotEmpty) {
       setState(() {
@@ -62,6 +126,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
       });
     }
   }
+
   @override
   void initState() {
     super.initState();

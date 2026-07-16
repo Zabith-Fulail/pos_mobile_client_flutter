@@ -22,12 +22,13 @@ class VoiceCommandService {
       if (!ok) return;
     }
     await _speech.listen(
-      onResult: (result) {
-        onResult(result.recognizedWords, result.finalResult);
-      },
-      listenFor: const Duration(seconds: 12),
-      pauseFor: const Duration(seconds: 3),
-      partialResults: true,
+      onResult: (result) => onResult(result.recognizedWords, result.finalResult),
+      listenOptions: stt.SpeechListenOptions(
+        listenFor: const Duration(seconds: 60),
+        pauseFor: const Duration(seconds: 10),
+        partialResults: true,
+      ),
+
     );
   }
 
